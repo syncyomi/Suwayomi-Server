@@ -1,6 +1,7 @@
 package suwayomi.tachidesk.global.impl.sync
 
 import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupManga
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Keeps only manga (and their chapters) modified at or after the last successful upload, which
@@ -14,3 +15,8 @@ internal fun changedSince(
     mangas
         .filter { it.lastModifiedAt >= since || it.chapters.any { c -> c.lastModifiedAt >= since } }
         .onEach { manga -> manga.chapters = manga.chapters.filter { it.lastModifiedAt >= since } }
+
+internal fun hasNewerHistory(
+    localLastReadAt: Map<String, Long>,
+    remote: BackupManga,
+): Boolean = remote.history.any { it.lastRead.milliseconds.inWholeSeconds > (localLastReadAt[it.url] ?: 0L) }

@@ -4,9 +4,11 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import suwayomi.tachidesk.manga.impl.backup.proto.models.Backup
 import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupCategory
 import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupChapter
+import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupHistory
 import suwayomi.tachidesk.manga.impl.backup.proto.models.BackupManga
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class SyncDeltaTest {
@@ -60,5 +62,26 @@ class SyncDeltaTest {
 
         val empty = ProtoBuf.decodeFromByteArray(Backup.serializer(), ByteArray(0))
         assertTrue(empty.backupManga.isEmpty())
+    }
+
+    @Test
+    fun historyReadLaterOnAnotherDeviceIsNewer() {
+        val remote = BackupManga(source = 1, url = "/m", history = listOf(BackupHistory(url = "/c1", lastRead = 200_000)))
+
+        assertTrue(hasNewerHistory(mapOf("/c1" to 100L), remote))
+    }
+
+    @Test
+    fun historyAlreadyReadLocallyIsNotNewer() {
+        val remote = BackupManga(source = 1, url = "/m", history = listOf(BackupHistory(url = "/c1", lastRead = 100_000)))
+
+        assertFalse(hasNewerHistory(mapOf("/c1" to 100L), remote))
+    }
+
+    @Test
+    fun historyOfAChapterNeverReadLocallyIsNewer() {
+        val remote = BackupManga(source = 1, url = "/m", history = listOf(BackupHistory(url = "/c2", lastRead = 1_000)))
+
+        assertTrue(hasNewerHistory(mapOf("/c1" to 100L), remote))
     }
 }

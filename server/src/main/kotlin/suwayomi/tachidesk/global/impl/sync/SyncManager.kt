@@ -579,16 +579,23 @@ object SyncManager {
             return true
         }
 
-        val localChapterVersions =
+        val localChapters =
             transaction {
                 ChapterTable
                     .getWithUserData(userId)
                     .selectAll()
                     .where { ChapterTable.manga eq localManga.id }
-                    .associate { it[ChapterTable.url] to (it.getOrNull(ChapterUserTable.version) ?: 0) }
+                    .toList()
             }
+        val localChapterVersions =
+            localChapters.associate { it[ChapterTable.url] to (it.getOrNull(ChapterUserTable.version) ?: 0) }
 
         if (areChaptersDifferent(localChapterVersions, remoteManga.chapters)) {
+            return true
+        }
+
+        val localLastReadAt = localChapters.associate { it[ChapterTable.url] to (it.getOrNull(ChapterUserTable.lastReadAt) ?: 0) }
+        if (hasNewerHistory(localLastReadAt, remoteManga)) {
             return true
         }
 
