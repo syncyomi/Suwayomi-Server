@@ -15,6 +15,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.inSubQuery
@@ -67,6 +68,7 @@ object BackupMangaHandler {
         userId: Int,
         flags: BackupFlags,
         since: Long? = null,
+        removedSince: Long? = null,
     ): List<BackupManga> =
         dbTransaction {
             if (!flags.includeManga) {
@@ -82,11 +84,17 @@ object BackupMangaHandler {
                             .where { ChapterUserTable.lastModifiedAt greaterEq it }
                     (MangaUserTable.lastModifiedAt greaterEq it) or (MangaTable.id inSubQuery chapterChanged)
                 } ?: Op.TRUE
+            val removed =
+                removedSince?.let {
+                    (MangaUserTable.inLibrary eq false) and
+                        (MangaUserTable.inLibraryAt greater 0L) and
+                        (MangaUserTable.lastModifiedAt greaterEq it)
+                } ?: Op.FALSE
             val manga =
                 MangaTable
                     .getWithUserData(userId)
                     .selectAll()
-                    .where { (MangaUserTable.inLibrary eq true) and changed }
+                    .where { ((MangaUserTable.inLibrary eq true) and changed) or removed }
                     .toList()
 
             manga.map { mangaRow ->
@@ -106,6 +114,7 @@ object BackupMangaHandler {
                         viewer_flags = mangaRow[MangaUserTable.viewerFlags],
                         chapterFlags = mangaRow[MangaUserTable.chapterFlags],
                         updateStrategy = UpdateStrategy.valueOf(mangaRow[MangaTable.updateStrategy]),
+                        favorite = mangaRow[MangaUserTable.inLibrary],
                         lastModifiedAt = mangaRow[MangaUserTable.lastModifiedAt],
                         version = mangaRow[MangaUserTable.version],
                         initialized = mangaRow[MangaTable.initialized],

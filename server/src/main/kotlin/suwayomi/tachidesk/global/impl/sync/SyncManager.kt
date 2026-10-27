@@ -340,8 +340,11 @@ object SyncManager {
                 logger.info { "Full converging sync for user $userId: adopting server versions" }
             }
             val since = if (full) null else lastPushedAt(userId)
+            val removedSince = lastPushedAt(userId).takeIf { it > 0 }
             val backupMangas =
-                BackupMangaHandler.backup(userId, backupFlags, since).let { if (since == null) it else changedSince(it, since) }
+                BackupMangaHandler
+                    .backup(userId, backupFlags, since, removedSince)
+                    .let { if (since == null) it else changedSince(it, since) }
             val backupCategories =
                 BackupCategoryHandler.backup(userId, backupFlags).filter { it.name != Category.DEFAULT_CATEGORY_NAME }
             toWireCategoryOrders(backupCategories, backupMangas)
