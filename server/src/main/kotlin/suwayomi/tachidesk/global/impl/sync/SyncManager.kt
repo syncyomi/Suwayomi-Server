@@ -296,29 +296,7 @@ object SyncManager {
                 }
             }
 
-            transaction {
-                MangaUserTable.update(
-                    {
-                        MangaUserTable.isSyncing eq true and (MangaUserTable.user eq userId)
-                    },
-                ) {
-                    it[MangaUserTable.isSyncing] = false
-                }
-                ChapterUserTable.update(
-                    {
-                        ChapterUserTable.isSyncing eq true and (ChapterUserTable.user eq userId)
-                    },
-                ) {
-                    it[ChapterUserTable.isSyncing] = false
-                }
-                CategoryTable.update(
-                    {
-                        CategoryTable.isSyncing eq true and (CategoryTable.user eq userId)
-                    },
-                ) {
-                    it[CategoryTable.isSyncing] = false
-                }
-            }
+            clearSyncingFlags(userId)
 
             val backupFlags =
                 BackupFlags(
@@ -409,6 +387,7 @@ object SyncManager {
             val (filteredFavorites, nonFavorites) =
                 filterFavoritesAndNonFavorites(userId, remoteBackup, restoreAll = converge)
             updateNonFavorites(userId, nonFavorites)
+            clearSyncingFlags(userId)
 
             val newSyncData =
                 backup.copy(
@@ -529,6 +508,32 @@ object SyncManager {
                 "Periodic sync for user $userId failed: $message"
             } else {
                 "Manual sync for user $userId failed: $message"
+            }
+        }
+    }
+
+    private fun clearSyncingFlags(userId: Int) {
+        transaction {
+            MangaUserTable.update(
+                {
+                    MangaUserTable.isSyncing eq true and (MangaUserTable.user eq userId)
+                },
+            ) {
+                it[MangaUserTable.isSyncing] = false
+            }
+            ChapterUserTable.update(
+                {
+                    ChapterUserTable.isSyncing eq true and (ChapterUserTable.user eq userId)
+                },
+            ) {
+                it[ChapterUserTable.isSyncing] = false
+            }
+            CategoryTable.update(
+                {
+                    CategoryTable.isSyncing eq true and (CategoryTable.user eq userId)
+                },
+            ) {
+                it[CategoryTable.isSyncing] = false
             }
         }
     }
